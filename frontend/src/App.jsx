@@ -1,35 +1,81 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+
+import Button from "./components/Button";
+import Input from "./components/Input";
+import List from "./components/List";
+
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [concurrency, setConcurrency] = useState(1);
+  const [result, setResult] = useState([]);
+  const [isFetching, setIsFetching] = useState(false);
+
+  const startFetching = async () => {
+    if (concurrency < 1 || concurrency > 100) {
+      return;
+    }
+
+    setIsFetching(true);
+    setResult([]);
+
+    const requestsPerBatch = concurrency;
+    const delayBetweenBatches = 2000;
+
+    for (let i = 1; i <= 1000; i += requestsPerBatch) {
+      const batchPromises = Array.from(
+        { length: requestsPerBatch },
+        (_, index) => {
+          const requestIndex = i + index;
+
+          return new Promise((resolve) => {
+            fetch(`http://localhost:3000/api?index=${requestIndex}`, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            })
+              .then((response) => response.json())
+              .then((data) => resolve(data.index))
+              .catch((error) => {
+                console.error("Error:", error);
+                resolve(null);
+              });
+          });
+        }
+      );
+
+      const batchResults = await Promise.all(batchPromises);
+      const filteredResults = batchResults.filter((result) => result !== null);
+      setResult((prevResult) => [...prevResult, ...filteredResults]);
+
+      await new Promise((resolve) => setTimeout(resolve, delayBetweenBatches));
+    }
+
+    setIsFetching(false);
+  };
 
   return (
     <>
+      <h1>Requests App</h1>
       <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <Input
+          min="0"
+          max="100"
+          type="number"
+          label="Concurrency"
+          id="Concurrency"
+          value={concurrency}
+          onChange={(e) => setConcurrency(parseInt(e.target.value))}
+        />
+        <Button onClick={startFetching} disabled={isFetching}>
+          Start
+        </Button>
+
+        <List list={result} />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

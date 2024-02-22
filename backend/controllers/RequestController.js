@@ -1,9 +1,15 @@
 const getRequests = async (req, res) => {
-  try {
-    res.send({ message: "Requests" });
-  } catch (error) {
-    res.status(500).send({ message: error.message });
+  const { index } = req.query;
+
+  if (!index) {
+    return res.status(400).send({ message: "Invalid index" });
   }
+
+  const randomDelay = Math.floor(Math.random() * 1000) + 1;
+
+  setTimeout(() => {
+    return res.status(200).send({ index });
+  }, randomDelay);
 };
 
 module.exports = { getRequests };
